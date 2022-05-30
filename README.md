@@ -1,1 +1,1 @@
-# Processamento e visualização de sinais usando a linguage R
+# Processamento e visualização de sinais usando a linguagem R
