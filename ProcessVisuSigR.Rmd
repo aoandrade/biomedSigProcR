@@ -1,0 +1,199 @@
+---
+title: "Biomedical signal processing and visualisation using R"
+subtitle: "VII Encontro Nacional de Engenharia Biomecânica"
+author: "Prof. Adriano de Oliveira Andrade, PhD - adriano@ufu.br"
+date: "01 June, 2022"
+output: 
+# https://bookdown.org/yihui/rmarkdown-cookbook/cross-ref.html
+       bookdown::html_document2:
+         toc: true 
+         #toc_float:
+         # toc_collapsed: true
+         toc_depth: 6
+         theme: readable
+         #https://bookdown.org/yihui/rmarkdown/html-document.html#custom-css
+         highlight: haddock 
+         fig_caption: yes
+         number_sections: true
+         css: style.css
+
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Biomedical signal visualisation
+
+## Example 1: Visualizing inertial sensor data
+
+The first thing to do is open the data file. The data set in this example is derived from inertial data, such as accelerometer, magnetometer, and gyroscope. The information was saved in an .xlsx (Excel) file.
+
+```{r warning=FALSE}
+library(openxlsx)
+
+df <- openxlsx::read.xlsx("V16C1RCC92.xlsx") # load inertial data from Excel file
+
+names(df) # display the variable names
+
+```
+
+The names of the variables can be improved to make graphic generation easier.
+
+
+```{r warning=FALSE}
+library(stringr)
+
+aa <- names(df) # assigning the variable names to a variable
+
+# identifying and replacing patterns in the names of the variables
+aa <- str_replace(string = aa, pattern = c("\\["), replacement = "") 
+aa <- str_replace(string = aa, pattern = "\\]", replacement = "") 
+aa <- str_replace(string = aa, pattern = "\\.", replacement = "")
+
+names(df) <- aa # assigning the altered names to the variables
+
+names(df)
+
+```
+
+As the data is now available in the global environment it is possible to visualize it by using static and interactive graphics. Let's start looking on how to plot the signal in a static way, which is very suitable for publications in journals, theses and other static materials.
+
+```{r warning=FALSE, fig.height=1.5, fig.width=10}
+library(ggplot2)
+
+gg <- ggplot() # create the graphic object
+gg <- gg + ggplot2::geom_line(data = df, 
+                              mapping = aes(x = Time, y = G1X)) # adding layers to the graphic object
+gg # display the graphic on the screen
+
+gg <- gg + theme_minimal() #changing the appearance of the theme 
+gg # display the graphic on the screen
+
+gg <- gg + ggplot2::ggtitle(label = "gyroscope data - sensor 1")
+  
+gg # display the graphic on the screen
+
+```
+
+If you wish to plot several biomedical time series in the same graphic or in distinct subpanels the data should be first reorganized to easy plotting the data.
+
+```{r warning=FALSE}
+
+library(tidyr)
+
+df.long <- pivot_longer(data = df, cols = (2:length(df)), 
+                        names_to = "variable",
+                        values_to = "value")
+head(df.long, n = 10L)
+
+# converting the variable names from string to factors
+# to sort out the variables according to their levels
+df.long$variable <- factor(df.long$variable, 
+                           levels = df.long$variable %>% unique()) 
+
+
+```
+
+Once the data is organized it can be plotted by using the ``ggplot2`` package.
+
+
+```{r warning=FALSE, fig.width=10, fig.height=15}
+g <- ggplot(data = df.long,
+            mapping = aes(x = Time, y = value)) +
+      geom_line() + 
+      facet_wrap( ~ variable, ncol = 3, scales = "free_y") + 
+      theme_light() + labs(y = "", x = "time (s)")
+   
+g
+
+```
+
+If you want to plot several waveforms on the same graph, you can choose the signals you want and plot them as shown below.
+
+```{r fig.height=2, fig.width=10, message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+
+df.filtered <- df.long %>% filter(variable == "G1X" |
+                                    variable == "G1Y" |
+                                    variable == "G1Z")
+
+g <- ggplot(data = df.filtered,
+            mapping = aes(x = Time,
+                          y = value,
+                          color = interaction(variable))) +
+    geom_line() + theme_minimal() + labs(color = "signal",
+                                         x = "time (s)",
+                                         y = "angular velocity (º/s)") 
+g
+
+
+```
+Several waveforms can be grouped and plotted in panels based on specific criteria.
+
+```{r fig.height=3, fig.width=10, message=FALSE, warning=FALSE}
+df.filtered <- df.long %>% filter(variable == "G1X" |
+                                    variable == "G1Y" |
+                                    variable == "G1Z" |
+                                    variable == "A1X" |
+                                    variable == "A1Y" |
+                                    variable == "A1Z" |
+                                    variable == "M1X" |
+                                    variable == "M1Y" |
+                                    variable == "M1Z")
+
+df.filtered$sensor <- str_sub(df.filtered$variable, 1, 1)
+
+g <- ggplot(data = df.filtered,
+            mapping = aes(x = Time,
+                          y = value,
+                          color = interaction(variable))) +
+  geom_line() +
+  facet_wrap( ~ sensor, ncol = 3, scales = "free_y",
+              strip.position = "left", 
+              labeller = as_labeller(c(A = "linear acceleration (g)", 
+                                       G = "angular velocity (º/s)",
+                                       M = "magnetic field (Gauss)"))) +
+  
+    theme_minimal() + labs(color = "signal",
+                                       x = "time (s)",
+                                       y = "") +
+  theme(strip.background = element_blank(),
+        strip.placement = "outside")
+g
+```
+
+Static figures can be saved in vectorial and several other formats.
+
+```{r}
+
+ggsave(filename = "figure1.pdf", plot = g, width = 160,
+       height = 75, units = "mm")
+
+ggsave(filename = "figure1.png", plot = g, width = 160,
+       height = 75, units = "mm")
+
+ggsave(filename = "figure1.tiff", plot = g, width = 160,
+       height = 75, units = "mm")
+
+```
+
+**Now, it is time for action!**
+
+> Generate a static graph with 'ggplot2', containing a panel for the X axis of each sensor type (i.e., accelerometer, gyroscope, and magnetometer). In each panel, two time-series should be plotted for each IMU (i.e. IMU1 and IMU2), and the time-series of IMU1 should be plotted in black while those for IMU2 in red. Don't forget to include the axes' names and units of measurement!
+
+
+
+# Pre-processing biomedical signals
+
+## Signal windowing
+
+## Removing linear and non-linear trends from biomedical signals
+
+## Filtering
+
+# Feature extraction, dimension reduction and visualization of information estimated from biomedical signals
+
+## PCA
