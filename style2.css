@@ -33,21 +33,3 @@ div.FOO {
   text-align: justify;
   text-justify: inter-word;
 }
-
-.dygraph-title {
-  text-align: center;
-  font-weight: bold;
-}
-
-.dygraph-xlabel{
-  text-align: center;
-}
-
-.dygraph-axis-label.dygraph-axis-label-y{
-  transform: translate(25px,0);
-}
-
-.dygraph-ylabel{
-  text-align: center;
-  transform: translate(-10px,0px);
-}
