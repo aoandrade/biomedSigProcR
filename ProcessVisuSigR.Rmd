@@ -20,15 +20,19 @@ output:
 
 ---
 
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"> 
+</head>
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Biomedical signal visualisation
 
-## Example 1: Visualizing inertial sensor data
+## Static visualising with R
 
-The first thing to do is open the data file. The data set in this example is derived from inertial data, such as accelerometer, magnetometer, and gyroscope. The information was saved in an .xlsx (Excel) file.
+The first thing to do is open the data file. The data set in this example is derived from inertial data, such as accelerometer, magnetometer, and gyroscope. The information was saved in an ``.xlsx`` (Excel) file.
 
 ```{r warning=FALSE}
 library(openxlsx)
@@ -72,7 +76,7 @@ gg <- gg + theme_minimal() #changing the appearance of the theme
 gg # display the graphic on the screen
 
 gg <- gg + ggplot2::ggtitle(label = "gyroscope data - sensor 1")
-  
+
 gg # display the graphic on the screen
 
 ```
@@ -102,10 +106,10 @@ Once the data is organized it can be plotted by using the ``ggplot2`` package.
 ```{r warning=FALSE, fig.width=10, fig.height=15}
 g <- ggplot(data = df.long,
             mapping = aes(x = Time, y = value)) +
-      geom_line() + 
-      facet_wrap( ~ variable, ncol = 3, scales = "free_y") + 
-      theme_light() + labs(y = "", x = "time (s)")
-   
+  geom_line() + 
+  facet_wrap( ~ variable, ncol = 3, scales = "free_y") + 
+  theme_light() + labs(y = "", x = "time (s)")
+
 g
 
 ```
@@ -124,13 +128,14 @@ g <- ggplot(data = df.filtered,
             mapping = aes(x = Time,
                           y = value,
                           color = interaction(variable))) +
-    geom_line() + theme_minimal() + labs(color = "signal",
-                                         x = "time (s)",
-                                         y = "angular velocity (º/s)") 
+  geom_line() + theme_minimal() + labs(color = "signal",
+                                       x = "time (s)",
+                                       y = "angular velocity (º/s)") 
 g
 
 
 ```
+
 Several waveforms can be grouped and plotted in panels based on specific criteria.
 
 ```{r fig.height=3, fig.width=10, message=FALSE, warning=FALSE}
@@ -157,9 +162,9 @@ g <- ggplot(data = df.filtered,
                                        G = "angular velocity (º/s)",
                                        M = "magnetic field (Gauss)"))) +
   
-    theme_minimal() + labs(color = "signal",
-                                       x = "time (s)",
-                                       y = "") +
+  theme_minimal() + labs(color = "signal",
+                         x = "time (s)",
+                         y = "") +
   theme(strip.background = element_blank(),
         strip.placement = "outside")
 g
@@ -184,16 +189,374 @@ ggsave(filename = "figure1.tiff", plot = g, width = 160,
 
 > Generate a static graph with 'ggplot2', containing a panel for the X axis of each sensor type (i.e., accelerometer, gyroscope, and magnetometer). In each panel, two time-series should be plotted for each IMU (i.e. IMU1 and IMU2), and the time-series of IMU1 should be plotted in black while those for IMU2 in red. Don't forget to include the axes' names and units of measurement!
 
+## Interactive visualizaton with R
 
+When inspecting and processing biomedical signals, interactive data visualization becomes very important and can be fundamental for understanding information, navigating the signal, paying attention to details and identifying trends, discontinuities, or outliers, because this type of data visualization allows us to zoom in on periods of interest, highlight points, and mark events that help in data analysis. With the ``dygraphs`` package in R, we bring our graphics to life. It's simple to create an dynamic graphic with this package and the code below does just that!
+
+```{r message=FALSE, warning=FALSE, error=FALSE, fig.width=9, fig.height=1.5}
+
+library(dygraphs)
+
+df.filtered <- df %>% 
+  dplyr::select(Time, G1Y) # selecting the Time and G1Y columns
+
+dygraph(df.filtered) # generating the dynamic graph
+
+```
+
+Although we can zoom in on signal segments (by clicking and dragging) and re-view the entire signal with a double click, we still can't navigate along the signal. When we are interested in navigating along the signal or still paying attention to time periods, we can use the ``dyRangeSelector()`` function. 
+
+```{r message=FALSE, warning=FALSE, error=FALSE, fig.width=9, fig.height=1.5}
+
+dygraph(df.filtered) %>% # generating the dynamic graph
+  dyRangeSelector(dateWindow = c(10,17)) # adding a range selector (rectangular window of 7 s)
+
+```
+
+In addition, the ``dyEvent()`` function is used to specify the times when events occurred. Event marking is particularly interesting when we believe that the event has probably influenced a noticeable change in the time series and should be observed. In other hand, the ``dyShading()`` function allows us to highlight a period or several periods in the time series data. Additionally, you can specify the color of the series lines and other graph styling by using the ``dyOptions()`` function.
+
+```{r message=FALSE, warning=FALSE, error=FALSE, fig.align='center',fig.width=9, fig.height=3.5}
+
+df.filtered <- df %>% 
+  dplyr::select(Time, G1X, G1Y, G1Z) # selecting the Time and gyroscope signals of IMU1
+
+dygraph(df.filtered, xlab = "time (s)", ylab = "angular velocity (º/s)") %>% # generating the dynamic graph
+  dyRangeSelector(dateWindow = c(15,20)) %>% # adding a range selector
+  dyOptions(colors = c("#ae0001","#d3a625","#2a623d")) %>% # adding color palette
+  dyShading(from = "17.02", to = "17.34", color = "#cee6fd") %>% # adding shadow
+  dyShading(from = "19.18", to = "19.54", color = "#fff5da") %>% # adding shadow
+  dyEvent(c("17.02", "17.34"), c("start", "end"), labelLoc = "top") # adding event
+
+```
 
 # Pre-processing biomedical signals
 
 ## Signal windowing
 
+Signal windowing is the process of segmenting a signal into sections in order to facilitate analysis and improve the spectral properties of the sampled signal. In general, different types of windows can be used for windowing (i.e., rectangular window, Hanning window, Hamming window, and Kaiser-Bessel window, among other types of window).
+
+However, defining a window size given in units of time or number of samples is a significant challenge in practice. We can't consistently segment the signal if we choose a size that is too small or too large. Thus, knowledge of the investigated phenomenon, sampling frequency, and signal duration are required to define the size of the window.
+
+Furthermore, signal windowing can be done with or without overlap. When there is overlap, a window intersects with the adjacent window at some time point. On the other hand, when there is no overlap, the start time of a window does not overlap with the time of the adjacent window. When we want to investigate signal behavior over time using features, we usually use unoverlaped rectangular windows. This type of window is straightforward and easy to implement in R. 
+
+We will window the EMG signal of channel 2 using non-overlapping rectangular windows of 500 ms. Thus, knowing the sampling frequency of the signal and its duration, we can define the start and end indexes of each window.
+
+For the sampling frequency ($f_s$), it is enough to consider the inverse of temporal resolution ($\Delta t$), that is,
+
+$$f_s = \frac{1}{\Delta t}$$
+
+the inverse of the time difference between two consecutive samples.
+
+```{r message=FALSE, warning=FALSE, error=FALSE}
+
+dt <- df$Time[2]-df$Time[1] # temporal resolution (s)
+
+paste("Temporal resolution is", dt, "s")
+
+fs <- 1/(dt) # sampling frequency (Hz)
+
+paste("Sampling frequency is", fs, "Hz")
+
+```
+
+With the sampling frequency and window size defined in time, we were able to calculate the number of samples for each window. 
+
+```{r message=FALSE, warning=FALSE, error=FALSE}
+
+n.wnd <- (500/1000)*fs # number of samples for each window
+
+paste(n.wnd, "samples by window")
+
+```
+
+Now, we have to keep in mind that windowing can't exceed the duration of the signal. In addition, the end index of the first window will be the start index of the second window and thus successively until the last window.
+
+```{r message=FALSE, warning=FALSE, error=FALSE}
+
+indx1 <- seq(from = 1,
+             to = floor(length(df$Time) - n.wnd),
+             by = n.wnd)
+
+print(paste("Start indices:",
+            paste(indx1,collapse = ", "),
+            collapse = "\n"))
+
+indx2 <- seq(from = 1 + n.wnd,
+             to = length(df$Time),
+             by = n.wnd)
+
+print(paste("End indices:",
+            paste(indx2,collapse = ", "),
+            collapse = "\n"))
+
+```
+
+With dygraphs, we can graphically illustrate the windowing performed. To indicate the beginning and end of windows, we can use the ``dyEvent()`` function.
+
+```{r message=FALSE, warning=FALSE, error=FALSE, fig.align='center', fig.width=9, fig.height=3.5}
+
+df.filtered <- df %>%
+  dplyr::select(Time, EMG2)
+
+
+dygraph(df.filtered, main = "EMG - channel 2", ylab = "", xlab = "time (s)") %>%
+  dyRangeSelector(dateWindow = c(1.95,3.55)) %>%
+  dyOptions(colors = "#fb8500") %>%
+  dyShading(from = df$Time[indx1[5]], to = df$Time[indx2[5]], color = "#fee44047") %>% 
+  dyEvent(c(df$Time[indx1[5]],df$Time[indx2[5]]), c("wnd 5 - start", "wnd 5 - end"), labelLoc = "bottom") %>%
+  dyShading(from = df$Time[indx1[6]], to = df$Time[indx2[6]], color = "#fdf4db") %>% 
+  dyEvent(c(df$Time[indx1[6]],df$Time[indx2[6]]), c("wnd 6 - start", "wnd 6 - end"), labelLoc = "top") %>%
+  dyShading(from = df$Time[indx1[7]], to = df$Time[indx2[7]], color = "#fee44047") %>% 
+  dyEvent(c(df$Time[indx1[7]],df$Time[indx2[7]]), c("wnd 7 - start", "wnd 7 - end"), labelLoc = "bottom")
+
+```
+
 ## Removing linear and non-linear trends from biomedical signals
+
+```{r message=FALSE, warning=FALSE, error=FALSE, fig.align='center', fig.width=9, fig.height=3.5}
+
+dygraph(df.filtered, main = "EMG - channel 2") %>%
+  dyRangeSelector() %>%
+  dyOptions(colors = "#fb8500")
+
+trend <- vector(mode = "numeric", length = length(indx1))
+tm <- vector(mode = "numeric", length = length(indx1))
+
+for(i in 1:length(trend)){
+  
+  trend[i] <- median(df$EMG2[indx1[i]:indx2[i]])
+  tm[i] <- mean(df$Time[indx1[i]:indx2[i]])
+  
+}
+
+dygraph(data.frame(wnd = 1:length(trend),
+                   trend), 
+        main = "trend",
+        xlab = "window",
+        ylab = "amplitude"
+) %>% 
+  dyRangeSelector() %>%
+  dyOptions(colors = "#bf0000") 
+
+
+trd <- spline(x = tm,
+              y = trend,
+              xout = df$Time, 
+              method = "fmm")$y
+
+df.filtered$trend <- trd
+
+
+dygraph(df.filtered, main = "EMG and trend", ylab = "", xlab = "time (s)") %>%
+  dyRangeSelector() %>%
+  dyOptions(colors = c("#fb8500","#bf0000")) 
+
+
+EMG2r <- data.frame(Time = df.filtered$Time,
+                    EMGr = df.filtered$EMG2 - df.filtered$trend)
+
+dygraph(EMG2r, main = "EMG without trends", ylab = "", xlab = "time (s)") %>%
+  dyRangeSelector() %>%
+  dyOptions(colors = "#e0301e")
+
+```
 
 ## Filtering
 
-# Feature extraction, dimension reduction and visualization of information estimated from biomedical signals
+```{r message=FALSE, warning=FALSE, error=FALSE, fig.align='center', fig.width=9, fig.height=3.5}
 
-## PCA
+library(signal)
+library(dygraphs)
+
+df.filtered <- df %>% 
+  dplyr::select(Time, A2Y)
+
+dygraph(df.filtered,
+        xlab = "time (s)", 
+        ylab = "linear acceleration (g)") %>%
+  dyRangeSelector() %>%
+  dyOptions(colors = "#800080")
+
+dt <- df$Time[2]-df$Time[1] # temporal resolution (s)
+
+paste("Temporal resolution is", dt, "s")
+
+fs <- 1/(dt) # sampling frequency (Hz)
+
+paste("Sampling frequency is", fs, "Hz")
+
+fc_l <- 1 # cutoff frequency (Hz)
+
+fc_h <- 7 # cutoff frequency (Hz)
+
+paste("Cutoff frequency [",fc_l,"-",fc_h, "] Hz", sep = "")
+
+n <- 2 # order 
+
+paste("Filter order is", n)
+
+w <- c(fc_l,fc_h)/(fs/2) # digital frequency
+
+paste("Digital frequency is [",
+      paste(w, collapse = "-"), "]", sep = "")
+
+bt <- signal::butter(n = n, W = w, type = "pass") # Butterworth filter coefficients
+
+freqz(filt = bt, Fs = fs)
+
+df.filtered$A2Yf <- filtfilt(bt,df.filtered$A2Y)
+
+dygraph(df.filtered, 
+        xlab = "time (s)",
+        ylab = "linear acceleration (g)") %>%
+  dyRangeSelector() %>%
+  dyOptions(colors = c("#800080", "black"))
+
+library(psd)
+
+psd.A2Y <- pspectrum(df.filtered$A2Y,
+                     verbose = FALSE, 
+                     niter=10, AR=TRUE,
+                     x.frqsamp=fs,
+                     plot=FALSE) # adaptive multitaper spectrum estimation
+
+psd.A2Y <- psd.A2Y[c("freq","spec")] %>% 
+  as.data.frame()
+
+psd.A2Yf <- pspectrum(df.filtered$A2Yf, verbose = FALSE, 
+                      niter=10, AR=TRUE,
+                      x.frqsamp=fs,
+                      plot=FALSE) # adaptive multitaper spectrum estimation
+
+psd.A2Yf <- psd.A2Yf[c("freq","spec")] %>% 
+  as.data.frame()
+
+```
+
+```{r message=FALSE, warning=FALSE, error=FALSE, fig.align='center', fig.width=9, fig.height=1.5}
+
+g <- ggplot()
+g <- g + geom_line(data = psd.A2Y,
+                   mapping = aes(x = freq,
+                                 y = spec),
+                   color = "black", 
+                   size = 0.75)
+g <- g + geom_line(data = psd.A2Yf,
+                   mapping = aes(x = freq,
+                                 y = spec),
+                   color = "red",
+                   size = 0.75)
+g <- g + theme_minimal()
+g <- g + labs(x = "frequency (Hz)",
+              y = "energy (g²/Hz)")
+g
+
+```
+
+**Now, it is time for action!**
+
+> Choose the signal that has the most evident linear trend. Apply a Butterworth filter to remove this trend.
+
+# Visualisation of features extracted from biomedical signals
+
+$$activity = \sigma^2 = \frac{1}{N-1} \sum_{i=1}^{N}(x_i - \mu)^2$$
+
+$$mobility = \frac{\sigma_d}{\sigma}$$
+
+$$complexity = \frac{\sigma_{dd}/\sigma_d}{\sigma_d/\sigma}$$
+```{r message=FALSE, error=FALSE,warning=FALSE, fig.align='center', fig.height=2.5, fig.width=9.0}
+
+dt <- df$Time[2]-df$Time[1] # temporal resolution (s)
+
+paste("Temporal resolution is", dt, "s")
+
+fs <- 1/(dt) # sampling frequency (Hz)
+
+paste("Sampling frequency is", fs, "Hz")
+
+n.wnd <- (1)*fs # number of samples for each window
+
+paste(n.wnd, "samples by window")
+
+indx1 <- seq(from = 1,
+             to = floor(length(df$Time) - n.wnd),
+             by = n.wnd)
+
+print(paste("Start indices:",
+            paste(indx1,collapse = ", "),
+            collapse = "\n"))
+
+indx2 <- seq(from = 1 + n.wnd,
+             to = length(df$Time),
+             by = n.wnd)
+
+print(paste("End indices:",
+            paste(indx2,collapse = ", "),
+            collapse = "\n"))
+
+v.var <- vector(mode = "numeric", length = length(indx1))
+v.mob <- vector(mode = "numeric", length = length(indx1))
+v.comp <- vector(mode = "numeric", length = length(indx1))
+
+v.var.f <- vector(mode = "numeric", length = length(indx1))
+v.mob.f <- vector(mode = "numeric", length = length(indx1))
+v.comp.f <- vector(mode = "numeric", length = length(indx1))
+
+
+for(i in 1:length(indx1)){
+  
+  v.var[i] <- var(df.filtered$A2Y[indx1[i]:indx2[i]])
+  
+  v.mob[i] <- sqrt((var(diff(df.filtered$A2Y[indx1[i]:indx2[i]])))/var(df.filtered$A2Y[indx1[i]:indx2[i]]))
+  
+  v.comp[i] <- sqrt(var(diff(diff(df.filtered$A2Y[indx1[i]:indx2[i]])))/ var(diff(df.filtered$A2Y[indx1[i]:indx2[i]])))/v.mob[i]
+
+  
+  v.var.f[i] <- var(df.filtered$A2Yf[indx1[i]:indx2[i]])
+  
+  v.mob.f[i] <- sqrt((var(diff(df.filtered$A2Yf[indx1[i]:indx2[i]])))/var(df.filtered$A2Yf[indx1[i]:indx2[i]]))
+  
+  v.comp.f[i] <- sqrt(var(diff(diff(df.filtered$A2Yf[indx1[i]:indx2[i]])))/ var(diff(df.filtered$A2Yf[indx1[i]:indx2[i]])))/v.mob[i]
+  
+    
+}
+
+
+features <- data.frame(
+  activity = v.var,
+  mobility = v.mob,
+  complexity = v.comp,
+  activity.f = v.var.f,
+  mobility.f = v.mob.f,
+  complexity.f = v.comp.f
+)
+
+library(tidyverse)
+
+df.longer <- pivot_longer(data = features,
+                          cols = 1:6,
+                          names_to = "feature",
+                          values_to = "value")
+
+df.longer$signal <- ifelse(is.na(str_extract(df.longer$feature, ".f")),
+  "raw", "filtered")
+
+df.longer$signal <- factor(df.longer$signal, levels = c("raw","filtered"))
+
+df.longer$feature <- str_replace(df.longer$feature,
+                                 fixed(".f"),
+                                 "")
+ggplot(data = df.longer,
+       mapping = aes(x = signal, y = value, color = signal)) + 
+  geom_boxplot(outlier.size = 0.2,
+               outlier.shape = 1) + 
+  facet_wrap(~feature, ncol = 3, scales = "free_y") + 
+  theme_minimal() + 
+  labs(x = "", y = "")
+
+
+```
+
+**Now, it is time for action!**
+
+> Estimate the root mean square (RMS) of the filtered and non-filtered signals. The RMS should be estimated for windows of 1 second each, without overlapping. Contrast the estimated features through box plots.

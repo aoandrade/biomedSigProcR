@@ -13,7 +13,7 @@ library(psd)
 
 
 # Set the directory
-setwd("C:/Users/Usuario/OneDrive/UFU/Doutorado/PROJETO JOGO PARKINSON/Sinais/Parkinson/Alaor/COM_F1")
+#setwd("C:/Users/Usuario/OneDrive/UFU/Doutorado/PROJETO JOGO PARKINSON/Sinais/Parkinson/Alaor/COM_F1")
 
 # Reading the file
 df <- read.table("53_3_1.txt", header = T, sep = "\t", dec = ",") 
