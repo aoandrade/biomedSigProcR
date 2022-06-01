@@ -187,11 +187,11 @@ ggsave(filename = "figure1.tiff", plot = g, width = 160,
 
 **Now, it is time for action!**
 
-> Generate a static graph with 'ggplot2', containing a panel for the X axis of each sensor type (i.e., accelerometer, gyroscope, and magnetometer). In each panel, two time-series should be plotted for each IMU (i.e. IMU1 and IMU2), and the time-series of IMU1 should be plotted in black while those for IMU2 in red. Don't forget to include the axes' names and units of measurement!
+> Generate a static graph with 'ggplot2', containing a panel for the X axis of each sensor type, i.e., accelerometer, gyroscope, and magnetometer. In each panel, two time-series should be plotted for each IMU. i.e. IMU1 and IMU2, and the time-series of IMU1 should be plotted in black while those for IMU2 in red. Don't forget to include the axes' names and units of measurement!
 
-## Interactive visualizaton with R
+## Interactive visualisation of biomedical signals with R
 
-When inspecting and processing biomedical signals, interactive data visualization becomes very important and can be fundamental for understanding information, navigating the signal, paying attention to details and identifying trends, discontinuities, or outliers, because this type of data visualization allows us to zoom in on periods of interest, highlight points, and mark events that help in data analysis. With the ``dygraphs`` package in R, we bring our graphics to life. It's simple to create an dynamic graphic with this package and the code below does just that!
+When inspecting and processing biomedical signals, interactive data visualisation is critical for understanding information, understing distinct parts of the signal, paying attention to details, and identifying trends, discontinuities, or outliers, because this type of data visualisation allows us to zoom in on periods of interest, highlight points, and mark events that aid in data analysis. We bring our graphics to life with R's ``dygraphs`` package. It's easy to make a dynamic graphic with this package, and the code below demonstrates how!
 
 ```{r message=FALSE, warning=FALSE, error=FALSE, fig.width=9, fig.height=1.5}
 
@@ -200,27 +200,27 @@ library(dygraphs)
 df.filtered <- df %>% 
   dplyr::select(Time, G1Y) # selecting the Time and G1Y columns
 
-dygraph(df.filtered) # generating the dynamic graph
+dygraph(df.filtered, width = "100%", height = "200px" ) # generating the dynamic graph
 
 ```
 
-Although we can zoom in on signal segments (by clicking and dragging) and re-view the entire signal with a double click, we still can't navigate along the signal. When we are interested in navigating along the signal or still paying attention to time periods, we can use the ``dyRangeSelector()`` function. 
+Even though we can zoom in on signal segments by clicking and dragging and re-view the entire signal with a double click, visualisation along the signal is not possible. We can use the ``dyRangeSelector()`` function when we are interested in visualising along the signal or observing time intervals. 
 
 ```{r message=FALSE, warning=FALSE, error=FALSE, fig.width=9, fig.height=1.5}
 
-dygraph(df.filtered) %>% # generating the dynamic graph
+dygraph(df.filtered, width = "100%", height = "200px") %>% # generating the dynamic graph
   dyRangeSelector(dateWindow = c(10,17)) # adding a range selector (rectangular window of 7 s)
 
 ```
 
-In addition, the ``dyEvent()`` function is used to specify the times when events occurred. Event marking is particularly interesting when we believe that the event has probably influenced a noticeable change in the time series and should be observed. In other hand, the ``dyShading()`` function allows us to highlight a period or several periods in the time series data. Additionally, you can specify the color of the series lines and other graph styling by using the ``dyOptions()`` function.
+In addition, the ``dyEvent()`` function is used to specify the times when events occurred. Event marking is particularly interesting when we believe that the event has probably influenced a noticeable change in the time series and should be observed. In other hand, the ``dyShading()`` function allows us to highlight a period or several periods in the time series data. Additionally, you can specify the color of the series lines and other graphical styling by using the ``dyOptions()`` function.
 
 ```{r message=FALSE, warning=FALSE, error=FALSE, fig.align='center',fig.width=9, fig.height=3.5}
 
 df.filtered <- df %>% 
   dplyr::select(Time, G1X, G1Y, G1Z) # selecting the Time and gyroscope signals of IMU1
 
-dygraph(df.filtered, xlab = "time (s)", ylab = "angular velocity (º/s)") %>% # generating the dynamic graph
+dygraph(df.filtered, width = "100%", height = "200px", xlab = "time (s)", ylab = "angular velocity (º/s)") %>% # generating the dynamic graph
   dyRangeSelector(dateWindow = c(15,20)) %>% # adding a range selector
   dyOptions(colors = c("#ae0001","#d3a625","#2a623d")) %>% # adding color palette
   dyShading(from = "17.02", to = "17.34", color = "#cee6fd") %>% # adding shadow
@@ -233,13 +233,13 @@ dygraph(df.filtered, xlab = "time (s)", ylab = "angular velocity (º/s)") %>% # 
 
 ## Signal windowing
 
-Signal windowing is the process of segmenting a signal into sections in order to facilitate analysis and improve the spectral properties of the sampled signal. In general, different types of windows can be used for windowing (i.e., rectangular window, Hanning window, Hamming window, and Kaiser-Bessel window, among other types of window).
+Signal windowing is the method of dividing a signal into sections to facilitate analysis and improve the sampled signal's spectral properties. Different types of windows can typically be used for windowing (i.e., rectangular window, Hanning window, Hamming window, and Kaiser-Bessel window, among other types of window).
 
-However, defining a window size given in units of time or number of samples is a significant challenge in practice. We can't consistently segment the signal if we choose a size that is too small or too large. Thus, knowledge of the investigated phenomenon, sampling frequency, and signal duration are required to define the size of the window.
+In practice, defining a window size given in units of time or number of samples is extremely difficult. We cannot segment the signal consistently if we select a size that is too small or too large. Determining the window size requires knowledge of the investigated phenomenon, sampling frequency, and signal duration.
 
-Furthermore, signal windowing can be done with or without overlap. When there is overlap, a window intersects with the adjacent window at some time point. On the other hand, when there is no overlap, the start time of a window does not overlap with the time of the adjacent window. When we want to investigate signal behavior over time using features, we usually use unoverlaped rectangular windows. This type of window is straightforward and easy to implement in R. 
+Signal windowing can also be performed with or without overlap. When there is overlap, a window intersects with the window next to it at some point in time. When there is no overlap, on the other hand, the start time of one window does not overlap with the start time of the adjacent window. When investigating signal behaviour over time using features, non-overlapping rectangular windows are typically employed. This window type is simple and straightforward to implement in R.
 
-We will window the EMG signal of channel 2 using non-overlapping rectangular windows of 500 ms. Thus, knowing the sampling frequency of the signal and its duration, we can define the start and end indexes of each window.
+We will window the EMG signal of channel 2 with 500-ms rectangular windows that do not overlap. Knowing the signal's sampling frequency and duration enables us to determine the beginning and ending indices of each window.
 
 For the sampling frequency ($f_s$), it is enough to consider the inverse of temporal resolution ($\Delta t$), that is,
 
@@ -269,7 +269,7 @@ paste(n.wnd, "samples by window")
 
 ```
 
-Now, we have to keep in mind that windowing can't exceed the duration of the signal. In addition, the end index of the first window will be the start index of the second window and thus successively until the last window.
+Now, we have to keep in mind that windowing cannot exceed the duration of the signal. In addition, the end index of the first window will be the start index of the second window and thus successively until the last window.
 
 ```{r message=FALSE, warning=FALSE, error=FALSE}
 
@@ -299,7 +299,7 @@ df.filtered <- df %>%
   dplyr::select(Time, EMG2)
 
 
-dygraph(df.filtered, main = "EMG - channel 2", ylab = "", xlab = "time (s)") %>%
+dygraph(df.filtered,  width = "100%", height = "200px", main = "EMG - channel 2", ylab = "", xlab = "time (s)") %>%
   dyRangeSelector(dateWindow = c(1.95,3.55)) %>%
   dyOptions(colors = "#fb8500") %>%
   dyShading(from = df$Time[indx1[5]], to = df$Time[indx2[5]], color = "#fee44047") %>% 
@@ -313,11 +313,15 @@ dygraph(df.filtered, main = "EMG - channel 2", ylab = "", xlab = "time (s)") %>%
 
 ## Removing linear and non-linear trends from biomedical signals
 
+Trends are always present in biomedical signals. Let's study the script below and see how we can visualise and remove them.
+
 ```{r message=FALSE, warning=FALSE, error=FALSE, fig.align='center', fig.width=9, fig.height=3.5}
 
-dygraph(df.filtered, main = "EMG - channel 2") %>%
+dygraph(df.filtered, width = "100%", height = "200px", main = "EMG - channel 2") %>% dyAxis("x", label = "time (s)") %>%
   dyRangeSelector() %>%
   dyOptions(colors = "#fb8500")
+
+ 
 
 trend <- vector(mode = "numeric", length = length(indx1))
 tm <- vector(mode = "numeric", length = length(indx1))
@@ -330,7 +334,8 @@ for(i in 1:length(trend)){
 }
 
 dygraph(data.frame(wnd = 1:length(trend),
-                   trend), 
+                   trend),
+        width = "100%", height = "200px",
         main = "trend",
         xlab = "window",
         ylab = "amplitude"
@@ -347,7 +352,7 @@ trd <- spline(x = tm,
 df.filtered$trend <- trd
 
 
-dygraph(df.filtered, main = "EMG and trend", ylab = "", xlab = "time (s)") %>%
+dygraph(df.filtered, width = "100%", height = "200px", main = "EMG and trend", ylab = "", xlab = "time (s)") %>%
   dyRangeSelector() %>%
   dyOptions(colors = c("#fb8500","#bf0000")) 
 
@@ -355,13 +360,15 @@ dygraph(df.filtered, main = "EMG and trend", ylab = "", xlab = "time (s)") %>%
 EMG2r <- data.frame(Time = df.filtered$Time,
                     EMGr = df.filtered$EMG2 - df.filtered$trend)
 
-dygraph(EMG2r, main = "EMG without trends", ylab = "", xlab = "time (s)") %>%
+dygraph(EMG2r, width = "100%", height = "200px", main = "EMG without trends", ylab = "", xlab = "time (s)") %>%
   dyRangeSelector() %>%
   dyOptions(colors = "#e0301e")
 
 ```
 
 ## Filtering
+
+Filtering is a relevant signal processing step. Let's study the script below to understand how basic filtering can be performed in R.
 
 ```{r message=FALSE, warning=FALSE, error=FALSE, fig.align='center', fig.width=9, fig.height=3.5}
 
@@ -371,7 +378,7 @@ library(dygraphs)
 df.filtered <- df %>% 
   dplyr::select(Time, A2Y)
 
-dygraph(df.filtered,
+dygraph(df.filtered,width = "100%", height = "200px",
         xlab = "time (s)", 
         ylab = "linear acceleration (g)") %>%
   dyRangeSelector() %>%
@@ -406,7 +413,7 @@ freqz(filt = bt, Fs = fs)
 
 df.filtered$A2Yf <- filtfilt(bt,df.filtered$A2Y)
 
-dygraph(df.filtered, 
+dygraph(df.filtered, width = "100%", height = "200px",
         xlab = "time (s)",
         ylab = "linear acceleration (g)") %>%
   dyRangeSelector() %>%
@@ -458,6 +465,9 @@ g
 > Choose the signal that has the most evident linear trend. Apply a Butterworth filter to remove this trend.
 
 # Visualisation of features extracted from biomedical signals
+
+Bo Hjorth introduced Hjorth parameters, which are indicators of statistical properties used in signal processing in the time domain, in 1970. Activity, Mobility, and Complexity are the three parameters, which are defined below. Let's implement these formulas in R and estimate these parameters as features varying over the time, and then compare the results of these features estimated for both non-filtered (raw) and filtered signals.
+
 
 $$activity = \sigma^2 = \frac{1}{N-1} \sum_{i=1}^{N}(x_i - \mu)^2$$
 
